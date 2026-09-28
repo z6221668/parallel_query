@@ -2,40 +2,31 @@
 
 [English](README.md)
 
-基于 Spring AOP、Java 21 虚拟线程和延迟代理的聚合查询工具。适用于**相互独立、结果保证非空、且不依赖调用线程事务**的只读查询。
+## 项目简介
 
-## 兼容版本
+Parallel Query Starter 是用于聚合查询的 Spring Boot 源码项目。它结合 Spring AOP、Java 21 虚拟线程和延迟结果代理，使**相互独立、结果保证非空、且不依赖调用线程事务**的只读查询重叠执行。
+
+## 支持版本
 
 | 组件 | 版本 |
 | --- | --- |
-| Starter | `1.0.0`（当前源码版本） |
-| JDK | 编译产物要求 21 或更高；已在 JDK 21 验证 |
+| 项目源码 | `1.0.0` |
+| JDK | 要求 21；更高版本尚未验证 |
 | Spring Boot | 已验证 3.5.16；其他版本（包括 Boot 4）尚未验证 |
 
 [Spring Boot 3.5 已结束开源维护](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/)。本 Starter 使用 Java 21 虚拟线程，因此 JDK 8 和 17 无法运行。其他 JDK 与 Spring Boot 组合需在宿主应用中验证。
 
 ## 使用方式
 
-`1.0.0` 发布到 GitHub Packages 后，在使用方项目的 `pom.xml` 中添加仓库和依赖：
+获取源码后，使用 JDK 21 在项目目录执行 `mvn install`，构建并安装到本机 Maven 仓库，然后在 Spring Boot 应用的 `pom.xml` 中引入本地构建的模块：
 
 ```xml
-<repositories>
-    <repository>
-        <id>github</id>
-        <url>https://maven.pkg.github.com/z6221668/parallel_query</url>
-    </repository>
-</repositories>
-
-<dependencies>
-    <dependency>
-        <groupId>com.parallel</groupId>
-        <artifactId>parallel-query-starter</artifactId>
-        <version>1.0.0</version>
-    </dependency>
-</dependencies>
+<dependency>
+    <groupId>com.parallel</groupId>
+    <artifactId>parallel-query-starter</artifactId>
+    <version>1.0.0</version>
+</dependency>
 ```
-
-从 GitHub Packages 安装公开包也需要认证。请在本机 Maven 的 `~/.m2/settings.xml` 中为 `github` 服务器 ID 配置具有 `read:packages` 权限的个人访问令牌（classic），不要把令牌写进项目 POM。参见 [GitHub Maven 注册表说明](https://docs.github.com/zh/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry)。如果尚未发布、只使用本地源码，先执行 `mvn install`，然后仅添加上面的 `<dependencies>`，无需 `<repositories>`。
 
 在聚合方法上添加 `@ParallelScope`，并在**能保证非空**的查询方法或类上添加 `@ParallelQuery(nonNullResult = true)`：
 
@@ -153,9 +144,18 @@ parallel:
 
 设置为 `false` 后，容量不足会抛出 `ParallelCapacityException`；应用须处理该错误或限制入口并发。这项配置不会限制其他 SQL 或其他数据源连接池。还应为实际使用的数据库驱动配置查询与网络超时，并与 Scope 超时配合。上线前用**并发请求和多副本**做负载测试，观察 Hikari 的活动、空闲、等待连接数，数据库已连接及运行会话，容量拒绝、超时，以及请求 p95/p99 延迟。并行查询还可能增加数据库 CPU 与 I/O 压力；事务外的多次读取也可能看到不同快照。
 
-## 验证
+## 测试结果
 
-在 JDK 21 环境运行 `mvn verify`。现有测试覆盖 Spring AOP 模拟查询、H2 上的真实 MyBatis Mapper 与事务、并行时序、MDC、JSON 序列化、容量回退、空值、不可代理类型、超时、取消及异常传播；尚未包含 JPA 和 RPC 客户端的集成验证。具体收益取决于查询耗时、连接池大小、代理适配和下游负载，不能保证固定的提升比例。
+2026-09-28 使用 Amazon Corretto 21.0.10、Spring Boot 3.5.16 执行 `mvn -q -o clean verify`，本地构建通过。Surefire 报告如下：
+
+| 测试组 | 通过 | 失败 | 跳过 |
+| --- | ---: | ---: | ---: |
+| 并行查询行为 | 28 | 0 | 0 |
+| JDK 代理偏好 | 1 | 0 | 0 |
+| MyBatis 与 H2 集成 | 3 | 0 | 0 |
+| **合计** | **32** | **0** | **0** |
+
+测试覆盖 Spring AOP 调度、H2 上的真实 MyBatis 查询与事务、并行执行、MDC、JSON 序列化、容量回退、空值、不可代理类型、超时、取消及异常传播；尚未集成验证 JPA、RPC 客户端、真实数据库驱动和生产负载。不能保证固定的性能提升比例。
 
 项目的贡献与安全问题报告方式分别见 [CONTRIBUTING.md](CONTRIBUTING.md) 和 [SECURITY.md](SECURITY.md)。
 

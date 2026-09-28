@@ -2,42 +2,33 @@
 
 [简体中文](README.zh-CN.md)
 
-A query aggregation library built on Spring AOP, Java 21 virtual threads, and lazy proxies. It is intended for **independent, read-only queries whose results are guaranteed to be non-null and do not depend on a transaction bound to the calling thread**.
+## Overview
 
-## Compatibility
+Parallel Query Starter is an open-source Spring Boot library for query aggregation. It uses Spring AOP, Java 21 virtual threads, and lazy result proxies to overlap **independent, read-only queries whose results are guaranteed to be non-null and do not depend on a transaction bound to the calling thread**.
+
+## Supported versions
 
 | Component | Version |
 | --- | --- |
-| Starter | `1.0.0` (current source version) |
-| JDK | 21 or newer is required by the compiled classes; verified on JDK 21 |
+| Project source | `1.0.0` |
+| JDK | 21 required; later versions are not verified |
 | Spring Boot | 3.5.16 verified; other versions, including Boot 4, are not verified |
 
 [Spring Boot 3.5 has reached the end of open-source support](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/). JDK 8 and 17 cannot run this starter because it uses Java 21 virtual threads. Validate other JDK and Spring Boot combinations in your application.
 
 ## Usage
 
-After version `1.0.0` is published to GitHub Packages, add its repository and dependency to the consuming project's `pom.xml`:
+With JDK 21, run `mvn install` in this source checkout to build it into your local Maven repository. Then add the locally built module to your Spring Boot application's `pom.xml`:
 
 ```xml
-<repositories>
-    <repository>
-        <id>github</id>
-        <url>https://maven.pkg.github.com/z6221668/parallel_query</url>
-    </repository>
-</repositories>
-
-<dependencies>
-    <dependency>
-        <groupId>com.parallel</groupId>
-        <artifactId>parallel-query-starter</artifactId>
-        <version>1.0.0</version>
-    </dependency>
-</dependencies>
+<dependency>
+    <groupId>com.parallel</groupId>
+    <artifactId>parallel-query-starter</artifactId>
+    <version>1.0.0</version>
+</dependency>
 ```
 
-GitHub Packages also requires authentication to install public packages. Configure a personal access token (classic) with `read:packages` for the `github` server ID in your local Maven `~/.m2/settings.xml`; keep the token out of the project POM. See [GitHub's Maven registry instructions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry). If using this source checkout before publication, run `mvn install` and use the dependency shown above without the `<repositories>` block.
-
-Add `@ParallelScope` to the aggregation method. Add `@ParallelQuery(nonNullResult = true)` to each query method or type **only when its result is guaranteed to be non-null**:
+Add `@ParallelScope` to the aggregation method and `@ParallelQuery(nonNullResult = true)` to each query method or type **only when its result is guaranteed to be non-null**:
 
 ```java
 public interface OrderMapper {
@@ -153,9 +144,18 @@ parallel:
 
 `false` makes overload fail with `ParallelCapacityException`; handle it at the application boundary or reduce incoming concurrency. It does not limit other SQL or other datasource pools. Configure database query and socket timeouts for the driver in use, and keep the scope timeout consistent with those limits. Before production use, load-test concurrent requests and replicas while monitoring Hikari active/idle/pending connections, database connected/running sessions, capacity rejections, timeouts, and p95/p99 request latency. Parallel reads can also increase database CPU and I/O pressure, and queries outside one transaction can observe different snapshots.
 
-## Verification
+## Test results
 
-Run `mvn verify` with JDK 21. Tests cover simulated queries through Spring AOP; a real MyBatis Mapper and transaction on H2; concurrent dispatch; MDC; JSON serialization; capacity fallback; null results; unproxyable types; timeouts; cancellation; and failure propagation. JPA and RPC clients have not been integration-tested. Actual performance depends on query latency, connection-pool size, proxy suitability, and downstream load. No fixed speedup is guaranteed.
+On 2026-09-28, `mvn -q -o clean verify` completed successfully with Amazon Corretto 21.0.10 and Spring Boot 3.5.16. Results from the local Surefire reports:
+
+| Test suite | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Parallel query behavior | 28 | 0 | 0 |
+| JDK proxy preference | 1 | 0 | 0 |
+| MyBatis and H2 integration | 3 | 0 | 0 |
+| **Total** | **32** | **0** | **0** |
+
+Tests cover Spring AOP dispatch, H2 MyBatis reads and transactions, concurrent execution, MDC, JSON serialization, capacity fallback, null results, unproxyable types, timeouts, cancellation, and failure propagation. JPA, RPC clients, real database drivers, and production workloads have not been integration-tested. No fixed speedup is guaranteed.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and [SECURITY.md](SECURITY.md) for security reports.
 
