@@ -11,14 +11,14 @@ Parallel Query Starter is an open-source Spring Boot library for query aggregati
 | Component | Version |
 | --- | --- |
 | Project source | `1.0.0` |
-| JDK | 21 required; later versions are not verified |
-| Spring Boot | 3.5.16 verified; other versions, including Boot 4, are not verified |
+| JDK | 21 is the minimum verified version; later versions are not verified |
+| Spring Boot | 3.2.3 is the lowest version verified with the current `1.0.0` JAR; 3.5.16 is the source build baseline |
 
-[Spring Boot 3.5 has reached the end of open-source support](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/). JDK 8 and 17 cannot run this starter because it uses Java 21 virtual threads. Validate other JDK and Spring Boot combinations in your application.
+[Spring Boot 3.5 has reached the end of open-source support](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/). JDK 8 and 17 cannot run this starter because it uses Java 21 virtual threads. Spring Boot versions below 3.2.3, the intervening 3.3/3.4 lines, and Boot 4 have not been verified with the current JAR; test them in your application before use.
 
 ## Usage
 
-With JDK 21, run `mvn install` in this source checkout to build it into your local Maven repository. Then add the locally built module to your Spring Boot application's `pom.xml`:
+Add the following dependency to your Spring Boot application's `pom.xml`:
 
 ```xml
 <dependency>
@@ -27,6 +27,8 @@ With JDK 21, run `mvn install` in this source checkout to build it into your loc
     <version>1.0.0</version>
 </dependency>
 ```
+
+This requires version `1.0.0` to be available from a Maven repository configured for your application. Alternatively, download the source and run `mvn install` with JDK 21; the same dependency then resolves from your local Maven repository.
 
 Add `@ParallelScope` to the aggregation method and `@ParallelQuery(nonNullResult = true)` to each query method or type **only when its result is guaranteed to be non-null**:
 
@@ -146,6 +148,8 @@ parallel:
 
 ## Test results
 
+### Current automated tests
+
 On 2026-09-28, `mvn -q -o clean verify` completed successfully with Amazon Corretto 21.0.10 and Spring Boot 3.5.16. Results from the local Surefire reports:
 
 | Test suite | Passed | Failed | Skipped |
@@ -155,7 +159,28 @@ On 2026-09-28, `mvn -q -o clean verify` completed successfully with Amazon Corre
 | MyBatis and H2 integration | 3 | 0 | 0 |
 | **Total** | **32** | **0** | **0** |
 
+The current `1.0.0` JAR was also installed locally and loaded as a dependency in a separate Spring Boot 3.2.3 application on JDK 21. Its same 32 tests passed (0 failures, 0 skipped). This verifies 3.2.3 as the lowest **tested** Boot version; it does not establish an absolute minimum for untested releases.
+
 Tests cover Spring AOP dispatch, H2 MyBatis reads and transactions, concurrent execution, MDC, JSON serialization, capacity fallback, null results, unproxyable types, timeouts, cancellation, and failure propagation. JPA, RPC clients, real database drivers, and production workloads have not been integration-tested. No fixed speedup is guaranteed.
+
+### Historical test database benchmark
+
+The separate **test database** benchmark ran on 2026-09-28 with JDK 21.0.10, Spring Boot 3.2.3, and an earlier `1.0.0-SNAPSHOT` build of this library. It used one application instance, a MySQL connection pool of 8, and an async task limit of 50. Each case had one warmup pair and three measured serial/parallel pairs, with result checks. The test covered 5, 10, ..., 50 `SELECT` calls per batch in three modes: independent lookups; relational joins; and dependent two-stage lookups. The table shows the endpoints; the charts and [CSV data](docs/benchmarks/test-db-2026-09-28.csv) contain every step.
+
+| Mode | Calls | Serial median | Parallel median | Speedup | Serial equivalent QPS | Parallel equivalent QPS |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Independent | 5 | 187.3 ms | 79.3 ms | 2.36× | 26.7 | 63.1 |
+| Independent | 50 | 1,991.3 ms | 310.0 ms | 6.42× | 25.1 | 161.3 |
+| Join | 5 | 189.6 ms | 37.7 ms | 5.03× | 26.4 | 132.5 |
+| Join | 50 | 1,879.4 ms | 276.5 ms | 6.80× | 26.6 | 180.8 |
+| Dependent | 5 | 185.1 ms | 75.7 ms | 2.44× | 27.0 | 66.0 |
+| Dependent | 50 | 1,870.2 ms | 276.6 ms | 6.76× | 26.7 | 180.8 |
+
+![Test database median batch latency from 5 to 50 calls](docs/benchmarks/latency.svg)
+
+![Test database equivalent batch QPS from 5 to 50 calls](docs/benchmarks/qps.svg)
+
+Equivalent QPS is `calls / median batch duration`, **not sustained throughput under concurrent requests**. The benchmark's async limit exceeded its pool size and is not a production sizing recommendation. These results belong to the earlier snapshot and do not establish performance of the current `1.0.0` source. Network delay, cache state, indexes, and database load can change the results; test your own database and connection budget before use.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for contributions and [SECURITY.md](SECURITY.md) for security reports.
 
