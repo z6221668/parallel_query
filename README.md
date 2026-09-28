@@ -4,17 +4,38 @@
 
 A query aggregation library built on Spring AOP, Java 21 virtual threads, and lazy proxies. It is intended for **independent, read-only queries whose results are guaranteed to be non-null and do not depend on a transaction bound to the calling thread**.
 
-Verified baseline: JDK 21 and Spring Boot 3.5.16. Spring Boot 3.5 has reached the end of open-source support; Spring Boot 4 has not been verified with this starter. Validate other combinations in your application. The current source version is `1.0.0`; run `mvn install` when building from a local checkout.
+## Compatibility
+
+| Component | Version |
+| --- | --- |
+| Starter | `1.0.0` (current source version) |
+| JDK | 21 or newer is required by the compiled classes; verified on JDK 21 |
+| Spring Boot | 3.5.16 verified; other versions, including Boot 4, are not verified |
+
+[Spring Boot 3.5 has reached the end of open-source support](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/). JDK 8 and 17 cannot run this starter because it uses Java 21 virtual threads. Validate other JDK and Spring Boot combinations in your application.
 
 ## Usage
 
+After version `1.0.0` is published to GitHub Packages, add its repository and dependency to the consuming project's `pom.xml`:
+
 ```xml
-<dependency>
-    <groupId>com.parallel</groupId>
-    <artifactId>parallel-query-starter</artifactId>
-    <version>1.0.0</version>
-</dependency>
+<repositories>
+    <repository>
+        <id>github</id>
+        <url>https://maven.pkg.github.com/z6221668/parallel_query</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>com.parallel</groupId>
+        <artifactId>parallel-query-starter</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+</dependencies>
 ```
+
+GitHub Packages also requires authentication to install public packages. Configure a personal access token (classic) with `read:packages` for the `github` server ID in your local Maven `~/.m2/settings.xml`; keep the token out of the project POM. See [GitHub's Maven registry instructions](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry). If using this source checkout before publication, run `mvn install` and use the dependency shown above without the `<repositories>` block.
 
 Add `@ParallelScope` to the aggregation method. Add `@ParallelQuery(nonNullResult = true)` to each query method or type **only when its result is guaranteed to be non-null**:
 

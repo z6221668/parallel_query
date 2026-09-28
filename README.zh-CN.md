@@ -4,17 +4,38 @@
 
 基于 Spring AOP、Java 21 虚拟线程和延迟代理的聚合查询工具。适用于**相互独立、结果保证非空、且不依赖调用线程事务**的只读查询。
 
-验证基线：JDK 21、Spring Boot 3.5.16。Spring Boot 3.5 已结束开源维护；本 Starter 尚未验证 Spring Boot 4。其他组合需在宿主应用中验证。当前源码版本为 `1.0.0`；从本地源码使用时，请先执行 `mvn install`。
+## 兼容版本
+
+| 组件 | 版本 |
+| --- | --- |
+| Starter | `1.0.0`（当前源码版本） |
+| JDK | 编译产物要求 21 或更高；已在 JDK 21 验证 |
+| Spring Boot | 已验证 3.5.16；其他版本（包括 Boot 4）尚未验证 |
+
+[Spring Boot 3.5 已结束开源维护](https://spring.io/blog/2026/06/25/spring-boot-3-5-16-available-now/)。本 Starter 使用 Java 21 虚拟线程，因此 JDK 8 和 17 无法运行。其他 JDK 与 Spring Boot 组合需在宿主应用中验证。
 
 ## 使用方式
 
+`1.0.0` 发布到 GitHub Packages 后，在使用方项目的 `pom.xml` 中添加仓库和依赖：
+
 ```xml
-<dependency>
-    <groupId>com.parallel</groupId>
-    <artifactId>parallel-query-starter</artifactId>
-    <version>1.0.0</version>
-</dependency>
+<repositories>
+    <repository>
+        <id>github</id>
+        <url>https://maven.pkg.github.com/z6221668/parallel_query</url>
+    </repository>
+</repositories>
+
+<dependencies>
+    <dependency>
+        <groupId>com.parallel</groupId>
+        <artifactId>parallel-query-starter</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+</dependencies>
 ```
+
+从 GitHub Packages 安装公开包也需要认证。请在本机 Maven 的 `~/.m2/settings.xml` 中为 `github` 服务器 ID 配置具有 `read:packages` 权限的个人访问令牌（classic），不要把令牌写进项目 POM。参见 [GitHub Maven 注册表说明](https://docs.github.com/zh/packages/working-with-a-github-packages-registry/working-with-the-apache-maven-registry)。如果尚未发布、只使用本地源码，先执行 `mvn install`，然后仅添加上面的 `<dependencies>`，无需 `<repositories>`。
 
 在聚合方法上添加 `@ParallelScope`，并在**能保证非空**的查询方法或类上添加 `@ParallelQuery(nonNullResult = true)`：
 
